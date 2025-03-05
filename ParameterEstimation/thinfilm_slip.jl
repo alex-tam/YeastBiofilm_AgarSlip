@@ -63,11 +63,20 @@ function thinfilm_slip(par, dp, ex, output::Bool)
         S[i+1] = solve_S(dτ, S[i], u, u_old)
         # 7. Update outer domain and nutrient concentration
         if S[i+1] >= S[i]
-            G = LinearInterpolation(ξo_old, gso) # Create interpolations function
+            x = vcat(S[i].*ξ, S[i].*ξo[2:end])
+            g = vcat(gs, gso[2:end])
+            G = LinearInterpolation(x, g, extrapolation_bc=Flat()) # Create interpolations function
             ξo = range(1.0, par.L/S[i+1], length = par.Nξ) # Update outer ξ
-            gso = G(ξo) # Update g_s outside biofilm
+            gs = G(S[i+1].*ξ)# Update g_s inside biofilm
+            gso = G(S[i+1].*ξo) # Update g_s outside biofilm
         else
-            @printf("The biofilm retracted. \n"); break
+            x = vcat(S[i].*ξ, S[i].*ξo[2:end])
+            g = vcat(gs, gso[2:end])
+            G = LinearInterpolation(x, g, extrapolation_bc=Flat()) # Create interpolations function
+            ξo = range(1.0, par.L/S[i+1], length = par.Nξ) # Update outer ξ
+            gs = G(S[i+1].*ξ)# Update g_s inside biofilm
+            gso = G(S[i+1].*ξo) # Update g_s outside biofilm
+            @printf("The biofilm retracted. \n")
         end
         # The bug in this step occurs if the biofilm retracts in the first time step, and we try to interpolate outside the domain.
         # 8. Plot solution

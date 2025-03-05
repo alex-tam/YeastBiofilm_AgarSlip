@@ -25,7 +25,7 @@ include("solve_S.jl")
     ψn::Float64 # [mm^2/g/min] Cell profileration rate
     ψd::Float64 # [/min] Cell death rate
     G::Float64 = 5e-5 # [g/mm^2] Initial nutrient concentration
-    D0::Float64 = 4.04e-2 # [mm^2/min] Nutrient diffusivity
+    D0::Float64 = 4.04e-2 # [mm^2/min] Glucose diffusivity in water
     η::Float64 # [/min] Nutrient consumption rate
     Q::Float64 = 2.92e-3 # [mm/min] Nutrient mass transfer coefficient
     λ::Float64 # [g/mm^2/min] Slip coefficient
@@ -65,7 +65,7 @@ function nondimensionalise(dp, Ds, Db, ψm)
     nond_Ψm = ψm/dp.ψn
     nond_D = Ds/(dp.G*dp.ψn*dp.Xc^2)
     nond_Pe = dp.ψn*dp.Xc^2*dp.G/Db
-    nond_Υ = dp.η*dp.Xc/Db
+    nond_Υ = dp.η*dp.Xc^2/Db
     nond_Qs = dp.Q*dp.Xc/(dp.ε*Ds)
     nond_Qb = dp.Q*dp.Xc/(dp.ε*Db)
     nond_λ = dp.λ*dp.Xc/(dp.ε*dp.μ)
@@ -76,7 +76,7 @@ end
 
 "Main function for computing one solution"
 function main()
-    dp = Dimensional(ψn = 5.1, ψd = 2.57e-5, λ = 6.12e-5, η = 5.0e-4) # Load dimensional parameter data structure
+    dp = Dimensional(ψn = 4.8, ψd = 2.3e-5, λ = 2.5e-3, η = 5.25e-4) # Load dimensional parameter data structure
     Ds = (1-0.023*dp.a)*dp.D0 # Nutrient diffusivity (agar)
     Db = 0.24*dp.D0 # Nutrient diffusivity (biofilm)
     ψm = dp.ψn/9 # ECM production rate
