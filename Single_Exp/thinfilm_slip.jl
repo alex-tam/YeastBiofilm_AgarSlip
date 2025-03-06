@@ -54,10 +54,7 @@ function thinfilm_slip(par, dp, ex, output::Bool)
         # 2. Solve volume fraction equation
         ϕ = solve_phi(par, dτ, dξ, ξ, ϕ, gb, u, S[i])
         # 3. Solve substratum nutrient equations (substratum)
-        gs, gso, flag = solve_gs(par, dτ, dξ, ξ, ξo_old, gs, gso, gb, u, S[i])
-        if flag == true
-            return 100.0
-        end
+        gs, gso = solve_gs(par, dτ, dξ, ξ, ξo_old, gs, gso, gb, u, S[i])
         # 4. Solve biofilm nutrient equation
         gb = solve_gb(par, dτ, dξ, ξ, h, ϕ, gs, gb, u, S[i])
         # 5. Solve momentum equation
@@ -67,22 +64,14 @@ function thinfilm_slip(par, dp, ex, output::Bool)
         # 7. Update outer domain and nutrient concentration
         x = vcat(S[i].*ξ, S[i].*ξo[2:end])
         g = vcat(gs, gso[2:end])
-        if issorted(x) == false
-            @printf("Error: Knot vector unsorted. \n")
-            return 100.0
-        end
         G = LinearInterpolation(x, g, extrapolation_bc=Interpolations.Flat()) # Create interpolations function
         ξo = range(1.0, par.L/S[i+1], length = par.Nξ) # Update outer ξ
         gs = G(S[i+1].*ξ)# Update g_s inside biofilm
         gso = G(S[i+1].*ξo) # Update g_s outside biofilm
         if S[i+1] < S[i]
-            @printf("Error: The biofilm retracted. \n")
-            return 100.0
+            @printf("The biofilm retracted. \n")
         end
-        if S[i+1] >= par.L
-            @printf("Error: Biofilm reached end of the domain. \n")
-            return 100.0
-        end
+        # The bug in this step occurs if the biofilm retracts in the first time step, and we try to interpolate outside the domain.
         # 8. Plot solution
         if (output == true) && (mod(i, par.plot_interval) == 0)
             j = i+1

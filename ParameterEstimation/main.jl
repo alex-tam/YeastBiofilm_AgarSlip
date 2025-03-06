@@ -44,8 +44,8 @@ end
 @with_kw struct Params
     ε::Float64 = 1e-6 # [-] Small parameter for Newton's method
     Nξ::Int = 101 # [-] Number of grid points
-    Nτ::Int = 421 # [-] Number of time points
-    plot_interval::Int = 420 # [-] Time points between output files
+    Nτ::Int = 211 # [-] Number of time points
+    plot_interval::Int = 210 # [-] Time points between output files
     S0::Float64 = 1 # [-] Initial contact line position
     H0::Float64 # [-] Initial biofilm height
     T::Float64 # [-] End time
@@ -184,7 +184,7 @@ end
 
 "Main function for parameter estimation"
 function main()
-    Ψ = [4.7, 4.8, 4.9, 5.6, 5.7, 5.8] # ψn
+    Ψ = [8.0, 8.1, 8.2] # ψn
     A = [0.6, 0.8, 1.2, 2.0] # Agar density
     VP = Vector{Vector{Vector{Float64}}}()
     VF = Vector{Vector{Float64}}()
@@ -198,7 +198,7 @@ function main()
             ex = ExpData(a, t, w, ϕ, ar) # Load experimental data
             ##### Optimise parameter estimates for given experimental data
             # Global black box optimisation
-            res = bboptimize(x -> objective(x, ex, ψ); SearchRange = [(0.0, 5e-5), (0.0, 1e-2), (0.0, 1e-2)], 
+            res = bboptimize(x -> objective(x, ex, ψ); SearchRange = [(0.0, 5e-4), (0.0, 1e-2), (0.0, 1e-2)], 
                 MaxFuncEvals = 500, Method = :adaptive_de_rand_1_bin_radiuslimited)
             p0 = best_candidate(res)
             lower = [0.0, 0.0, 0.0]

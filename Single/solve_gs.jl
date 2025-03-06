@@ -13,13 +13,13 @@ function solve_gs(par, dτ, dξ, ξ, ξo, gs, gso, gb, u, S)
         gs_pert = solve_gs_inner(par, dτ, dξ, gr + par.ε, ξ, gs, gb, u, S)
         gso_pert = solve_gs_outer(par, dτ, dξo, gr + par.ε, ξo, gso, u, S)
         # Apply continuity condition
-        f = (-3*gso_test[1] + 4*gso_test[2] - gso_test[3])/(2*dξo) -  (3*gs_test[end] - 4*gs_test[end-1] + gs_test[end-2])/(2*dξ)
-        fp = (-3*gso_pert[1] + 4*gso_pert[2] - gso_pert[3])/(2*dξo) -  (3*gs_pert[end] - 4*gs_pert[end-1] + gs_pert[end-2])/(2*dξ)
+        f = (-3*gso_test[1] + 4*gso_test[2] - gso_test[3])/(2*dξo) - (3*gs_test[end] - 4*gs_test[end-1] + gs_test[end-2])/(2*dξ)
+        fp = (-3*gso_pert[1] + 4*gso_pert[2] - gso_pert[3])/(2*dξo) - (3*gs_pert[end] - 4*gs_pert[end-1] + gs_pert[end-2])/(2*dξ)
         dfdr = (fp - f)/par.ε
         # Update guess
-        gr = gr - f/dfdr
+        gr = gr_old - f/dfdr
         # Check tolerance
-        if gr - gr_old < par.ε
+        if abs(gr - gr_old) < par.ε
             break
         end
         if iterations == 10
@@ -31,15 +31,16 @@ function solve_gs(par, dτ, dξ, ξ, ξo, gs, gso, gb, u, S)
         @printf("Nutrient matching error occurred.\n")
     end
     # Obtain solutions with corrected gr
-    gs = solve_gs_inner(par, dτ, dξ, gr, ξ, gs, gb, u, S)
-    gso = solve_gs_outer(par, dτ, dξo, gr, ξo, gso, u, S)
-    return gs, gso
+    gs_new = solve_gs_inner(par, dτ, dξ, gr, ξ, gs, gb, u, S)
+    gso_new = solve_gs_outer(par, dτ, dξo, gr, ξo, gso, u, S)
+    return gs_new, gso_new
 end
 
 "Solve for nutrient concentration on ξ ∈ [0, 1]"
 function solve_gs_inner(par, dτ, dξ, gr, ξ, gs, gb, u, S)
     ### Build matrix ##
-    A = Matrix{Float64}(undef, par.Nξ, par.Nξ); fill!(A, 0.0) # Pre-allocate
+    A = Matrix{Float64}(undef, par.Nξ, par.Nξ)
+    fill!(A, 0.0) # Pre-allocate
     # Left boundary
     A[1, 1] = 1.0 + (dτ/2)*( 2*par.D/(S^2*dξ^2) + par.D*par.Qs )
     A[1, 2] = -(dτ/2)*( 2*par.D/(S^2*dξ^2) )
@@ -68,7 +69,8 @@ end
 "Solve for nutrient concentration on ξ ∈ [1, ξ_max]"
 function solve_gs_outer(par, dτ, dξ, gr, ξ, gs, u, S)
     ### Build matrix ##
-    A = Matrix{Float64}(undef, par.Nξ, par.Nξ); fill!(A, 0.0) # Pre-allocate
+    A = Matrix{Float64}(undef, par.Nξ, par.Nξ)
+    fill!(A, 0.0) # Pre-allocate
     # Left boundary
     A[1, 1] = 1.0
     # Interior grid points

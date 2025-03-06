@@ -6,7 +6,9 @@ using Parameters
 using LinearAlgebra
 using Interpolations
 using Printf
-using DelimitedFiles
+using Plots
+using Measures
+using LaTeXStrings
 
 # Load external files
 include("thinfilm_slip.jl")
@@ -14,7 +16,7 @@ include("solve_u.jl")
 include("solve_h.jl")
 include("solve_phi.jl")
 include("solve_gs.jl")
-include("solve_gb.jl")
+include("solve_gb_ecm_advection.jl")
 include("solve_S.jl")
 
 "Data structure for dimensional parameters"
@@ -56,6 +58,15 @@ end
     γ::Float64 # [-] Surface tension coefficient
 end
 
+"Data structure for experiments"
+struct ExpData
+    a::Float64 # [-] Agar weight percentage
+    t::Vector{Float64} # [min] Time for biofilm width collection
+    w::Vector{Float64} # [mm] Vector of biofilm widths
+    ϕ::Vector{Float64} # [-] Cell viability
+    ar::Float64 # [-] Aspect ratio
+end
+
 "Apply nondimensionalisation to obtain dimensionless parameters"
 function nondimensionalise(dp, Ds, Db, ψm)
     # Apply nondimensionalisation
@@ -73,17 +84,46 @@ function nondimensionalise(dp, Ds, Db, ψm)
     par = Params(H0 = dp.ε, T = nond_T, L = nond_L, Ψd = nond_Ψd, Ψm = nond_Ψm, D = nond_D, Pe = nond_Pe, Υ = nond_Υ, Qs = nond_Qs, Qb = nond_Qb, λ = nond_λ, γ = nond_γ) # Initialise data structure for dimensionless parameters
     return par
 end
-
+"Obtain experimental data for give agar density"
+function get_exp(a)
+    if a == 0.6 # 0.6% agar
+        t = 24*60*[2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 21.0] # Experimental time
+        w = 0.5*10*[0.5744081799793557, 0.9604482342331299, 1.2703540247559455, 1.5570392434668194, 1.802266346412321, 2.074337163491557, 2.2403945152741334, 2.7896823170919176]
+        ϕ = 0.9*[85.85, 87.35, 91.75]/100 # Day 14 viability, converted to cell volume fraction
+        ar = 2*0.019108 # [-] Experimental aspect ratio
+    elseif a == 0.8 # 0.8% agar
+        t = 24*60*[2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 21.0] # Experimental time
+        w = 0.5*10*[0.6698935187956951, 1.026876275539356,1.3066850930981668, 1.5770597356826002, 1.825431441978235, 2.0917898707728235, 2.266949659727405, 2.8451534672347805]
+        ϕ = 0.9*[85.85, 87.35, 91.75]/100 # Day 14 viability, converted to cell volume fraction
+        ar = 2*0.019108*(1.72/1.36) # [-] Experimental aspect ratio
+    elseif a == 1.2 # 1.2% agar
+        t = 24*60*[2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 21.0] # Experimental time
+        w = 0.5*10*[0.6164509723847065,0.9135083950335632,1.1340801867844186,1.3580911761585213,1.5651093345126472,1.7970215270038339,1.9523274477259278,2.475594028165591]
+        ϕ = 0.9*[85.85, 87.35, 91.75]/100 # Day 14 viability, converted to cell volume fraction
+        ar = 2*0.019108*(2.61/1.36) # [-] Experimental aspect ratio
+    elseif a == 2.0 # 2.0% agar
+        t = 24*60*[2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 21.0] # Experimental time
+        w = 0.5*10*[0.5108086974571971,0.7167935742476953,0.869374371151493,1.0288330599608337,1.1677623597193019,1.367712440366207,1.4881608633666543,1.95958153860255]
+        ϕ = 0.9*[85.85, 87.35, 91.75]/100 # Day 14 viability, converted to cell volume fraction
+        ar = 2*0.019108*(2.92/1.36) # [-] Experimental aspect ratio
+    else
+        @printf("Invalid agar density.")
+    end
+    return t, w, ϕ, ar
+end
 
 "Main function for computing one solution"
 function main()
-    dp = Dimensional(ψn = 8.0, ψd = 2.4e-5, λ = 1.124e-5, η = 6e-3) # Load dimensional parameter data structure
+    dp = Dimensional(ψn = 8.4, ψd = 1.6018e-5, λ = 0.00075, η = 0.9e-3) # Load dimensional parameter data structure
     Ds = (1-0.023*dp.a)*dp.D0 # Nutrient diffusivity (agar)
     Db = 0.24*dp.D0 # Nutrient diffusivity (biofilm)
     ψm = dp.ψn/9 # ECM production rate
     par = nondimensionalise(dp, Ds, Db, ψm)
     println(par)
-    thinfilm_slip(par)
+    a = 0.6 
+    t, w, ϕ, ar = get_exp(a)
+    ex = ExpData(a, t, w, ϕ, ar) # Load experimental data
+    thinfilm_slip(par, dp, ex, true)
 end
 
 @time main()

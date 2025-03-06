@@ -8,9 +8,9 @@ function solve_u(par, dξ, h, ϕ, gb, S)
     A[1,1] = 1.0 # Dirichlet BC (left boundary)
     # Interior grid points
     for i = 2:par.Nξ-1
-        A[i,i+1] = 2/(S*dξ^2)*(h[i+1] + h[i])
-        A[i,i] = -2/(S*dξ^2)*(h[i+1] + 2*h[i] + h[i-1]) - par.λ
-        A[i,i-1] = 2/(S*dξ^2)*(h[i] + h[i-1])
+        A[i,i+1] = 2/(S^2*dξ^2)*(h[i+1] + h[i])
+        A[i,i] = -2/(S^2*dξ^2)*(h[i+1] + 2*h[i] + h[i-1]) - par.λ
+        A[i,i-1] = 2/(S^2*dξ^2)*(h[i] + h[i-1])
     end
     # Right boundary
     A[par.Nξ, par.Nξ] = 3.0/(2*dξ) # One-sided difference
@@ -23,7 +23,7 @@ function solve_u(par, dξ, h, ϕ, gb, S)
     b[1] = 0.0 # Dirichlet BC (left boundary)
     # Interior grid points
     for i = 2:par.Nξ-1
-        b[i] = 2*(1+par.Ψm)/(S*dξ)*(ϕ[i+1]*gb[i+1]*h[i+1] - ϕ[i-1]*gb[i-1]*h[i-1]) - Γ[i]
+        b[i] = (1+par.Ψm)/(S*dξ)*(ϕ[i+1]*gb[i+1]*h[i+1] - ϕ[i-1]*gb[i-1]*h[i-1]) - Γ[i]
     end
     # Right boundary
     b[par.Nξ] = (S/2)*(1+par.Ψm)*ϕ[par.Nξ]*gb[par.Nξ] - Γ[end] # Neumann BC (right boundary)
@@ -45,5 +45,3 @@ function surface_tension(par, dξ, h, ϕ, gb, S)
     Γ[end] = par.γ/(4*S)*(2*h[end]-5*h[end-1]+4*h[end-2]-h[end-3])/(dξ^2)
     return Γ
 end
-
-# Adjust the above. In my thesis, I used 6th-order accurate schemes for the surface tension, and computed higher derivatives repeating a first derivative operator.
