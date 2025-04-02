@@ -3,6 +3,7 @@
 
 "Solve for nutrient concentration in biofilm"
 function solve_gb(par, dτ, dξ, ξ, h, ϕ, gs, gb, u, S)
+    flag = false
     ### Build matrix ##
     A = Matrix{Float64}(undef, par.Nξ, par.Nξ); fill!(A, 0.0) # Pre-allocate
     # Left boundary
@@ -33,5 +34,12 @@ function solve_gb(par, dτ, dξ, ξ, h, ϕ, gs, gb, u, S)
     # Right boundary
     b[end] = 0.0 # No-flux
     ### Solve linear system ###
-    return A\b
+    gb = A\b
+    # Sanity check
+    if any(gb .< 0)
+        @printf("Warning: Non-physical nutrient concentration in biofilm.\n")
+        flag = false
+        return gb, flag
+    end
+    return gb, flag
 end

@@ -2,10 +2,10 @@
 # Alex Tam, 07/11/2023
 
 "Initial conditions"
-function ic(par, ξ)
+function ic(dp, par, ξ)
     h = Vector{}(undef, par.Nξ)
     for i in eachindex(ξ)
-        h[i] = par.H0*(1-ξ[i]^2)
+        h[i] = dp.H0*(1-ξ[i]^2)
     end
     ϕ = ones(par.Nξ)
     gs = ones(par.Nξ)
@@ -39,7 +39,7 @@ function thinfilm_slip(par, dp, ex, output::Bool)
     S = Vector{Float64}(undef, par.Nτ)
     S[1] = 1.0 # Initial contact line position
     ξo = range(1.0, par.L/S[1], length = par.Nξ) # Initialise outer domain
-    h, ϕ, gs, gso, gb = ic(par, ξ)
+    h, ϕ, gs, gso, gb = ic(dp, par, ξ)
     u = solve_u(par, dξ, h, ϕ, gb, S[1])
     # Write initial conditions to files
     if output == true
@@ -59,7 +59,10 @@ function thinfilm_slip(par, dp, ex, output::Bool)
             return 100.0
         end
         # 4. Solve biofilm nutrient equation
-        gb = solve_gb(par, dτ, dξ, ξ, h, ϕ, gs, gb, u, S[i])
+        gb, flag = solve_gb(par, dτ, dξ, ξ, h, ϕ, gs, gb, u, S[i])
+        if flag == true
+            return 100.0
+        end
         # 5. Solve momentum equation
         u = solve_u(par, dξ, h, ϕ, gb, S[i])
         # 6. Solve contact line equation
@@ -76,11 +79,11 @@ function thinfilm_slip(par, dp, ex, output::Bool)
         gs = G(S[i+1].*ξ)# Update g_s inside biofilm
         gso = G(S[i+1].*ξo) # Update g_s outside biofilm
         if S[i+1] < S[i]
-            @printf("Error: The biofilm retracted. \n")
+            @printf("Warning: The biofilm retracted. \n")
             return 100.0
         end
         if S[i+1] >= par.L
-            @printf("Error: Biofilm reached end of the domain. \n")
+            @printf("Warning: Biofilm reached end of the domain. \n")
             return 100.0
         end
         # 8. Plot solution
@@ -99,7 +102,7 @@ function thinfilm_slip(par, dp, ex, output::Bool)
     # Nondimensionalise experiment
     t_non = dp.ψn*dp.G.*ex.t # Experimental time
     w_non = ex.w./dp.Xc # Experimental half-width
-    # Plot
+    # Plot contact line position
     if output == true
         plot(τ, S, xlabel = L"$\tau$", ylabel = L"$S(\tau)$", linecolor = :black, linewidth = 2, grid = false, margin=5mm, legend = false, xlims=(0, maximum(τ)), ylims=(0, dp.Xp/dp.Xc))
         scatter!(t_non, w_non, marker =:xcross, linecolor =:black, label = "0.6% Agar")
