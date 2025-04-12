@@ -27,7 +27,7 @@ include("solve_S.jl")
 "Data structure for dimensional parameters"
 @with_kw struct Dimensional
     T::Float64 = 30780 # [min] Experiment duration
-    Xc::Float64 = 1.0 # [mm] Initial biofilm half-width
+    Xc::Float64 = 1.5 # [mm] Initial biofilm half-width
     Xp::Float64 = 50.0 # [mm] Petri dish half-width
     ψn::Float64 # [mm^2/g/min] Cell profileration rate
     ψd::Float64 # [/min] Cell death rate
@@ -45,21 +45,19 @@ end
 "Data structure for dimensionless parameters"
 @with_kw struct Params
     ε::Float64 = 1e-6 # [-] Small parameter for Newton's method
-    Nξ::Int = 201 # [-] Number of grid points
+    Nξ::Int = 101 # [-] Number of grid points
     Nτ::Int = 841 # [-] Number of time points
     plot_interval::Int = 210 # [-] Time points between output files
     S0::Float64 = 1 # [-] Initial contact line position
     T::Float64 # [-] End time
     L::Float64 # [-] Domain width
     Ψd::Float64 # [-] Cell death rate
-    Ψm::Float64 # [-] ECM production rate
     D::Float64 # [-] Nutrient diffusion coefficient
     Pe::Float64 # [-] Péclet number
     Υ::Float64 # [-] Nutrient consumption rate
     Qs::Float64 # [-] Nutrient loss rate
     Qb::Float64 # [-] Nutrient uptake rate
     λ::Float64 # [-] Slip coefficient
-    γ::Float64 # [-] Surface tension coefficient
 end
 
 "Data structure for experiments"
@@ -72,49 +70,44 @@ struct ExpData
 end
 
 "Apply nondimensionalisation to obtain dimensionless parameters"
-function nondimensionalise(dp, Ds, Db, ψm)
+function nondimensionalise(dp, Ds, Db)
     # Apply nondimensionalisation
     nond_T = dp.ψn*dp.G*dp.T
     nond_L = dp.Xp/dp.Xc
     nond_Ψd = dp.ψd/(dp.ψn*dp.G)
-    nond_Ψm = ψm/dp.ψn
     nond_D = Ds/(dp.G*dp.ψn*dp.Xc^2)
     nond_Pe = dp.ψn*dp.Xc^2*dp.G/Db
     nond_Υ = dp.η*dp.Xc^2/Db
     nond_Qs = dp.Q*dp.Xc/(dp.ε*Ds)
     nond_Qb = dp.Q*dp.Xc/(dp.ε*Db)
     nond_λ = dp.λ*dp.Xc/(dp.ε*dp.μ)
-    nond_γ = dp.ε*dp.γ/(dp.ψn*dp.G*dp.Xc*dp.μ)
-    par = Params(T = nond_T, L = nond_L, Ψd = nond_Ψd, Ψm = nond_Ψm, D = nond_D, Pe = nond_Pe, Υ = nond_Υ, Qs = nond_Qs, Qb = nond_Qb, λ = nond_λ, γ = nond_γ) # Initialise data structure for dimensionless parameters
+    par = Params(T = nond_T, L = nond_L, Ψd = nond_Ψd, D = nond_D, Pe = nond_Pe, Υ = nond_Υ, Qs = nond_Qs, Qb = nond_Qb, λ = nond_λ) # Initialise data structure for dimensionless parameters
     return par
 end
 
 "Alternative method for fine-grid solutions"
-function nondimensionalise(dp, Ds, Db, ψm, ξ, τ, pl_int)
+function nondimensionalise(dp, Ds, Db, ξ, τ, pl_int)
     # Apply nondimensionalisation
     nond_T = dp.ψn*dp.G*dp.T
     nond_L = dp.Xp/dp.Xc
     nond_Ψd = dp.ψd/(dp.ψn*dp.G)
-    nond_Ψm = ψm/dp.ψn
     nond_D = Ds/(dp.G*dp.ψn*dp.Xc^2)
     nond_Pe = dp.ψn*dp.Xc^2*dp.G/Db
     nond_Υ = dp.η*dp.Xc/Db
     nond_Qs = dp.Q*dp.Xc/(dp.ε*Ds)
     nond_Qb = dp.Q*dp.Xc/(dp.ε*Db)
     nond_λ = dp.λ*dp.Xc/(dp.ε*dp.μ)
-    nond_γ = dp.ε*dp.γ/(dp.ψn*dp.G*dp.Xc*dp.μ)
-    par = Params(Nξ = ξ, Nτ = τ, plot_interval = pl_int, T = nond_T, L = nond_L, Ψd = nond_Ψd, Ψm = nond_Ψm, D = nond_D, Pe = nond_Pe, Υ = nond_Υ, Qs = nond_Qs, Qb = nond_Qb, λ = nond_λ, γ = nond_γ) # Initialise data structure for dimensionless parameters
+    par = Params(Nξ = ξ, Nτ = τ, plot_interval = pl_int, T = nond_T, L = nond_L, Ψd = nond_Ψd, D = nond_D, Pe = nond_Pe, Υ = nond_Υ, Qs = nond_Qs, Qb = nond_Qb, λ = nond_λ) # Initialise data structure for dimensionless parameters
     return par
 end
 
 "Compute the objective function: distance between model and parameters for given solution"
 function objective(p::Vector{T}, ex::ExpData) where{T}
     ##### Obtain dimensionless parameters
-    dp = Dimensional(ψd = p[1], λ = p[2], η = p[3], ψn = p[4]) # Load dimensional parameter data structure
+    dp = Dimensional(ψn = p[1], ψd = p[2], η = p[3], λ = p[4]) # Load dimensional parameter data structure
     Ds = (1-0.023*ex.a)*dp.D0 # Nutrient diffusivity (agar)
     Db = 0.24*dp.D0 # Nutrient diffusivity (biofilm)
-    ψm = dp.ψn/9 # ECM production rate
-    par = nondimensionalise(dp, Ds, Db, ψm)
+    par = nondimensionalise(dp, Ds, Db)
     ##### Compute model solution
     dist = thinfilm_slip(par, dp, ex, false)
     return dist
@@ -123,36 +116,32 @@ end
 "Function for both the objective and gradient"
 function fg!(F, G, p::Vector{T}, ex::ExpData) where{T}
     δ::Float64 = 1e-6
-    ##### Obtain dimensionless parameters
-    dp = Dimensional(ψd = p[1], λ = p[2], η = p[3], ψn = p[4]) # Load dimensional parameter data structure
+    ##### Compute objective function
+    dp = Dimensional(ψn = p[1], ψd = p[2], η = p[3], λ = p[4]) # Load dimensional parameter data structure
     Ds = (1-0.023*ex.a)*dp.D0 # Nutrient diffusivity (agar)
     Db = 0.24*dp.D0 # Nutrient diffusivity (biofilm)
-    ψm = dp.ψn/9 # ECM production rate
-    par = nondimensionalise(dp, Ds, Db, ψm)
+    par = nondimensionalise(dp, Ds, Db)
     dist = thinfilm_slip(par, dp, ex, false)
+    ##### Compute gradient
     if G !== nothing
-        # Gradient in ψd direction
-        dp1 = Dimensional(ψd = p[1] + δ, λ = p[2], η = p[3], ψn = p[4]) # Load dimensional parameter data structure
-        ψm1 = dp1.ψn/9 # ECM production rate
-        par1 = nondimensionalise(dp1, Ds, Db, ψm1)
+        # Gradient in ψn direction
+        dp1 = Dimensional(ψn = p[1] + δ, ψd = p[2], η = p[3], λ = p[4]) # Load dimensional parameter data structure
+        par1 = nondimensionalise(dp1, Ds, Db)
         p1_dist = thinfilm_slip(par1, dp1, ex, false)
         G[1] = (p1_dist-dist)/(δ)
-        # Gradient in λ direction
-        dp2 = Dimensional(ψd = p[1], λ = p[2] + δ, η = p[3], ψn = p[4]) # Load dimensional parameter data structure
-        ψm2 = dp2.ψn/9 # ECM production rate
-        par2 = nondimensionalise(dp2, Ds, Db, ψm2)
+        # Gradient in ψd direction
+        dp2 = Dimensional(ψn = p[1], ψd = p[2] + δ, η = p[3], λ = p[4]) # Load dimensional parameter data structure
+        par2 = nondimensionalise(dp2, Ds, Db)
         p2_dist = thinfilm_slip(par2, dp2, ex, false)
         G[2] = (p2_dist-dist)/(δ)
         # Gradient in η direction
-        dp3 = Dimensional(ψd = p[1], λ = p[2], η = p[3] + δ, ψn = p[4]) # Load dimensional parameter data structure
-        ψm3 = dp3.ψn/9 # ECM production rate
-        par3 = nondimensionalise(dp3, Ds, Db, ψm3)
+        dp3 = Dimensional(ψn = p[1], ψd = p[2], η = p[3] + δ, λ = p[4]) # Load dimensional parameter data structure
+        par3 = nondimensionalise(dp3, Ds, Db)
         p3_dist = thinfilm_slip(par3, dp3, ex, false)
         G[3] = (p3_dist-dist)/(δ)
-        # Gradient in ψn direction
-        dp4 = Dimensional(ψd = p[1], λ = p[2], η = p[3], ψn = p[4] + δ) # Load dimensional parameter data structure
-        ψm4 = dp4.ψn/9 # ECM production rate
-        par4 = nondimensionalise(dp4, Ds, Db, ψm4)
+        # Gradient in λ direction
+        dp4 = Dimensional(ψn = p[1], ψd = p[2], η = p[3], λ = p[4] + δ) # Load dimensional parameter data structure
+        par4 = nondimensionalise(dp4, Ds, Db)
         p4_dist = thinfilm_slip(par4, dp4, ex, false)
         G[4] = (p4_dist-dist)/(δ)
     end
@@ -169,12 +158,11 @@ function main()
     for a in A
         ##### Experimental data
         t, w, ϕ, ar = get_exp(a)
-        ##### Create data strucutre for experimental data
         ex = ExpData(a, t, w, ϕ, ar) # Load experimental data
         ##### Optimise parameter estimates for given experimental data
         # Global black box optimisation
-        res = bboptimize(x -> objective(x, ex); SearchRange = [(0.0, 5e-4), (0.0, 1e-2), (0.0, 1e-2), (5.0, 20.0)], 
-            MaxFuncEvals = 1000, Method = :adaptive_de_rand_1_bin_radiuslimited)
+        res = bboptimize(x -> objective(x, ex); SearchRange = [(5.0, 25.0), (0.0, 5e-4), (0.0, 1e-2), (0.0, 1e-2)], 
+            MaxFuncEvals = 500, Method = :random_search)
         p0 = best_candidate(res)
         lower = [0.0, 0.0, 0.0, 0.0]
         upper = [Inf, Inf, Inf, Inf]
@@ -185,14 +173,23 @@ function main()
         @time result = Optim.optimize(Optim.only_fg!((F, G, x) -> fg!(F, G, x, ex)), 
             lower, upper, p0, 
             Fminbox(inner_optimizer), 
-            Optim.Options(outer_iterations = 3, x_tol = 1e-6, f_tol = 1e-6, show_trace = true))
+            Optim.Options(outer_iterations = 3, 
+                x_abstol = 1e-6, f_abstol = 1e-6, g_abstol = 1e-6, 
+                outer_x_abstol = 1e-6, outer_f_abstol = 1e-6, outer_g_tol = 1e-6, 
+                show_trace = true))
         p = Optim.minimizer(result)
         f = Optim.minimum(result)
         push!(Vp, p)
         push!(Vf, f)
+        writedlm("OptimalParameters.csv", Vp)
+        writedlm("OptimalObjectives.csv", Vf)
+        ##### Plot optimal solution
+        dp = Dimensional(ψn = p[1], ψd = p[2], η = p[3], λ = p[4]) # Load dimensional parameter data structure
+        Ds = (1-0.023*ex.a)*dp.D0 # Nutrient diffusivity (agar)
+        Db = 0.24*dp.D0 # Nutrient diffusivity (biofilm)
+        par = nondimensionalise(dp, Ds, Db)
+        dist = thinfilm_slip(par, dp, ex, true)
     end
-    writedlm("vp.csv", Vp)
-    writedlm("vf.csv", Vf)
 end
 
 @time main()

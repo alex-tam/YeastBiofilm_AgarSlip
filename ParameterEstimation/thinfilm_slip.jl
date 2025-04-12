@@ -15,21 +15,22 @@ function ic(dp, par, ξ)
 end
 
 "Plot solution at a given, fixed time stamp"
-function draw_solution(i, ξ, ξo, τ, S, h, ϕ, gs, gso, gb, u)
+function draw_solution(i, ξ, ξo, τ, S, h, ϕ, gs, gso, gb, u, a)
     j = τ[i]
-    plot(S.*ξ, h, xlabel = L"$x$", title = "Solution (t = $j)", xlims=(0, maximum(S.*ξo)), ylims=(0, 4.0), grid = false, margin=5mm, linecolor = :black, linewidth = 2, label=L"$h$")
+    plot(S.*ξ, h, xlabel = L"$x$", title = "Solution (t = $j)", xlims=(0, maximum(S.*ξo)), ylims=(0, 1. + ceil(maximum(h))), grid = false, margin=5mm, linecolor = :black, linewidth = 2, label=L"$h$")
     plot!(S.*ξ, ϕ, linecolor = :red, linewidth = 2, label=L"$\bar{\phi}_n$")
     plot!(S.*ξ, gs, linecolor = :green, linewidth = 2, label=L"$g_s$")
     plot!(S.*ξo, gso, linecolor = :green, linewidth = 2, label=false)
     plot!(S.*ξ, gb, linecolor = :blue, linewidth = 2, label=L"$g_b$")
     plot!(S.*ξ, u, linecolor = :orange, linewidth = 2, label=L"$u$")
-    savefig("sol-step-$i.pdf")
+    savefig("sol-agar-$a-step-$i.pdf")
 end
 
 "Solve thin-film slip model for given model parameters"
 function thinfilm_slip(par, dp, ex, output::Bool)
     ##### Summary statistics #####
     summary_statistics = Vector{Float64}()
+    a = ex.a # Agar density for plot labelling
     ### Parameters and domain ###
     ξ = range(0, 1.0, length = par.Nξ) # Computational domain
     dξ = ξ[2] - ξ[1] # Grid spacing
@@ -43,7 +44,7 @@ function thinfilm_slip(par, dp, ex, output::Bool)
     u = solve_u(par, dξ, h, ϕ, gb, S[1])
     # Write initial conditions to files
     if output == true
-        draw_solution(1, ξ, ξo, τ, S[1], h, ϕ, gs, gso, gb, u)
+        draw_solution(1, ξ, ξo, τ, S[1], h, ϕ, gs, gso, gb, u, a)
     end
     ### Time stepping ###
     for i = 1:par.Nτ-1
@@ -89,34 +90,34 @@ function thinfilm_slip(par, dp, ex, output::Bool)
         # 8. Plot solution
         if (output == true) && (mod(i, par.plot_interval) == 0)
             j = i+1
-            draw_solution(j, ξ, ξo, τ, S[j], h, ϕ, gs, gso, gb, u)
+            draw_solution(j, ξ, ξo, τ, S[j], h, ϕ, gs, gso, gb, u, a)
         end
         idx::Int = 14/21*(par.Nτ-1)+1
         if i == idx
             idx_mid::Int = (par.Nξ+1)/2
             vol_frac = [ϕ[1], ϕ[idx_mid], ϕ[end]]
-            push!(summary_statistics, norm((ex.ϕ - vol_frac)./ex.ϕ))
+            push!(summary_statistics, sum(abs.(ex.ϕ - vol_frac)./ex.ϕ)/3 )
         end
     end
-    ### Contact line position ###
-    # Nondimensionalise experiment
+    ##### Contact line position #####
+    # Apply model scaling to experimental data
     t_non = dp.ψn*dp.G.*ex.t # Experimental time
     w_non = ex.w./dp.Xc # Experimental half-width
     # Plot contact line position
     if output == true
         plot(τ, S, xlabel = L"$\tau$", ylabel = L"$S(\tau)$", linecolor = :black, linewidth = 2, grid = false, margin=5mm, legend = false, xlims=(0, maximum(τ)), ylims=(0, dp.Xp/dp.Xc))
         scatter!(t_non, w_non, marker =:xcross, linecolor =:black, label = "0.6% Agar")
-        savefig("S.pdf")
+        savefig("S-agar-$a.pdf")
     end
-    ##### Compare with experiment
-    idx_exp::Vector{Int64} = [2/21*(par.Nτ-1)+1, 4/21*(par.Nτ-1)+1, 6/21*(par.Nτ-1)+1, 8/21*(par.Nτ-1)+1, 10/21*(par.Nτ-1)+1, 12/21*(par.Nτ-1)+1, 14/21*(par.Nτ-1)+1, par.Nτ]
+    # Compare with experiment
+    idx_exp = Int.(round.(ex.t.*(par.Nτ-1)./30780)) .+ 1 # Experimental time [min]
     S_comp = [S[i] for i in idx_exp]
-    push!(summary_statistics, norm((S_comp[2:end] - w_non[2:end])./w_non[end]))
+    push!(summary_statistics, sum(abs.(S_comp[2:end] - w_non[2:end])./w_non[end])/8)
     ##### Aspect ratio
     aspect = dp.ε*maximum(h)/S[end]
     if output == true
         @printf("The aspect ratio is: %f.\n", aspect)
     end
-    push!(summary_statistics, norm((aspect - ex.ar)/ex.ar))
+    push!(summary_statistics, abs(aspect - ex.ar)/ex.ar )
     return sum(summary_statistics)
 end

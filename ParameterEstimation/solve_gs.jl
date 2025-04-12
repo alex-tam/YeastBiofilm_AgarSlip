@@ -35,7 +35,7 @@ function solve_gs(par, dτ, dξ, ξ, ξo, gs, gso, gb, u, S)
     # Sanity check
     if any(gs_new .< 0) ||any(gso_new .< 0)
         @printf("Warning: Non-physical nutrient concentration in substratum.\n")
-        flag = false
+        flag = true
         return gs, gso, flag
     end
     return gs_new, gso_new, flag

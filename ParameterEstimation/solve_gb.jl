@@ -38,7 +38,7 @@ function solve_gb(par, dτ, dξ, ξ, h, ϕ, gs, gb, u, S)
     # Sanity check
     if any(gb .< 0)
         @printf("Warning: Non-physical nutrient concentration in biofilm.\n")
-        flag = false
+        flag = true
         return gb, flag
     end
     return gb, flag

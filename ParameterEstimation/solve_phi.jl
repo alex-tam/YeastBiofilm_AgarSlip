@@ -10,22 +10,22 @@ function solve_phi(par, dτ, dξ, ξ, ϕ, gb, u, S)
     A[1, 3] = -1.0/(2*dξ)
     # Interior grid points
     for i = 2:par.Nξ-1
-        A[i, i] = 1.0 - (dτ/2)*(gb[i] - par.Ψd - ϕ[i]*gb[i]*(1+par.Ψm))
+        A[i, i] = 1.0 - (dτ/2)*(gb[i] - par.Ψd - ϕ[i]*gb[i])
         A[i, i+1] = -dτ/(4*dξ)*(ξ[i]*u[end]-u[i])/S
         A[i, i-1] = dτ/(4*dξ)*(ξ[i]*u[end]-u[i])/S
     end
     # Right boundary
-    A[end, end] = 1 - (dτ/2)*(gb[end] - par.Ψd - ϕ[end]*gb[end]*(1+par.Ψm))
+    A[end, end] = 1 - (dτ/2)*(gb[end] - par.Ψd - ϕ[end]*gb[end])
     ### Build RHS ###
     b = Vector{Float64}(undef, par.Nξ) # Pre-allocate
     # Left boundary
     b[1] = 0.0 # No-flux BC
     # Interior grid points
     for i = 2:par.Nξ-1
-        b[i] = ϕ[i]*(1.0 + (dτ/2)*(gb[i] - par.Ψd - ϕ[i]*gb[i]*(1+par.Ψm))) + dτ/(4*dξ)*(ξ[i]*u[end]-u[i])/S*(ϕ[i+1] - ϕ[i-1])
+        b[i] = ϕ[i]*(1.0 + (dτ/2)*(gb[i] - par.Ψd - ϕ[i]*gb[i])) + dτ/(4*dξ)*(ξ[i]*u[end]-u[i])/S*(ϕ[i+1] - ϕ[i-1])
     end
     # Right boundary
-    b[end] = ϕ[end]*( 1 + (dτ/2)*(gb[end] - par.Ψd - ϕ[end]*gb[end]*(1+par.Ψm)) )
+    b[end] = ϕ[end]*( 1 + (dτ/2)*(gb[end] - par.Ψd - ϕ[end]*gb[end]) )
     ### Solve linear system ###
     return A\b
 end
