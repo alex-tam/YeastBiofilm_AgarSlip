@@ -96,7 +96,7 @@ function thinfilm_slip(par, dp, ex, output::Bool)
         if i == idx
             idx_mid::Int = (par.Nξ+1)/2
             vol_frac = [ϕ[1], ϕ[idx_mid], ϕ[end]]
-            push!(summary_statistics, sum(abs.(ex.ϕ - vol_frac)./ex.ϕ)/3 )
+            push!(summary_statistics, sum(((ex.ϕ - vol_frac)./ex.ϕ).^2)/3)
         end
     end
     ##### Contact line position #####
@@ -112,12 +112,12 @@ function thinfilm_slip(par, dp, ex, output::Bool)
     # Compare with experiment
     idx_exp = Int.(round.(ex.t.*(par.Nτ-1)./30780)) .+ 1 # Experimental time [min]
     S_comp = [S[i] for i in idx_exp]
-    push!(summary_statistics, sum(abs.(S_comp[2:end] - w_non[2:end])./w_non[end])/8)
+    push!(summary_statistics, sum(((S_comp[2:end] - w_non[2:end])./w_non[end]).^2)/8)
     ##### Aspect ratio
     aspect = dp.ε*maximum(h)/S[end]
     if output == true
         @printf("The aspect ratio is: %f.\n", aspect)
     end
-    push!(summary_statistics, abs(aspect - ex.ar)/ex.ar )
+    push!(summary_statistics, ((aspect - ex.ar)^2)/ex.ar)
     return sum(summary_statistics)
 end

@@ -33,7 +33,7 @@ function solve_gs(par, dτ, dξ, ξ, ξo, gs, gso, gb, u, S)
     gs_new = solve_gs_inner(par, dτ, dξ, gr, ξ, gs, gb, u, S)
     gso_new = solve_gs_outer(par, dτ, dξo, gr, ξo, gso, u, S)
     # Sanity check
-    if any(gs_new .< 0) ||any(gso_new .< 0)
+    if any(gs_new .< 0) || any(gso_new .< 0)
         @printf("Warning: Non-physical nutrient concentration in substratum.\n")
         flag = true
         return gs, gso, flag
