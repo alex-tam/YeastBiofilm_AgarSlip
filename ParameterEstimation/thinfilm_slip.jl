@@ -2,14 +2,14 @@
 # Alex Tam, 07/11/2023
 
 "Initial conditions"
-function ic(dp, par, ξ)
+function ic(par, ξ)
     h = Vector{}(undef, par.Nξ)
     for i in eachindex(ξ)
-        h[i] = dp.H0*(1-ξ[i]^2)
+        h[i] = par.H0*(1-ξ[i]^2)
     end
     ϕ = ones(par.Nξ)
     gs = ones(par.Nξ)
-    gso = ones(par.Nξ)
+    gso = ones(par.Nξo)
     gb = zeros(par.Nξ)
     return h, ϕ, gs, gso, gb
 end
@@ -27,10 +27,11 @@ function draw_solution(i, ξ, ξo, τ, S, h, ϕ, gs, gso, gb, u, a)
 end
 
 "Solve thin-film slip model for given model parameters"
-function thinfilm_slip(par, dp, ex, output::Bool)
+function thinfilm_slip(par, ex, output::Bool)
     ##### Summary statistics #####
     summary_statistics = Vector{Float64}()
     a = ex.a # Agar density for plot labelling
+    idx_exp = Int.(round.(ex.t.*(par.Nτ-1)./ex.t[end])) .+ 1 # Indices for experimental comparison
     ### Parameters and domain ###
     ξ = range(0, 1.0, length = par.Nξ) # Computational domain
     dξ = ξ[2] - ξ[1] # Grid spacing
@@ -38,10 +39,10 @@ function thinfilm_slip(par, dp, ex, output::Bool)
     dτ = τ[2] - τ[1] # Time step size
     ### Initial condition ###
     S = Vector{Float64}(undef, par.Nτ)
-    S[1] = 1.0 # Initial contact line position
+    S[1] = par.S0 # Initial contact line position
     ξo = range(1.0, par.L/S[1], length = par.Nξ) # Initialise outer domain
-    h, ϕ, gs, gso, gb = ic(dp, par, ξ)
-    u = solve_u(par, dξ, h, ϕ, gb, S[1])
+    h, ϕ, gs, gso, gb = ic(par, ξ)
+    u = solve_u(par, dξ, h, ϕ, gb, S[1]) 
     # Write initial conditions to files
     if output == true
         draw_solution(1, ξ, ξo, τ, S[1], h, ϕ, gs, gso, gb, u, a)
@@ -52,6 +53,10 @@ function thinfilm_slip(par, dp, ex, output::Bool)
         ξo_old = ξo # Store old outer variable
         # 1. Solve height equation
         h = solve_h(par, dτ, dξ, ξ, h, ϕ, gb, u, S[i])
+        if maximum(h) == h[end-1]
+            @printf("Error: Spurious oscillation suspected. \n")
+            return 100.0
+        end
         # 2. Solve volume fraction equation
         ϕ = solve_phi(par, dτ, dξ, ξ, ϕ, gb, u, S[i])
         # 3. Solve substratum nutrient equations (substratum)
@@ -92,32 +97,42 @@ function thinfilm_slip(par, dp, ex, output::Bool)
             j = i+1
             draw_solution(j, ξ, ξo, τ, S[j], h, ϕ, gs, gso, gb, u, a)
         end
-        idx::Int = 14/21*(par.Nτ-1)+1
+        idx::Int = idx_exp[7] # Index at Day 14
         if i == idx
             idx_mid::Int = (par.Nξ+1)/2
             vol_frac = [ϕ[1], ϕ[idx_mid], ϕ[end]]
-            push!(summary_statistics, sum(((ex.ϕ - vol_frac)./ex.ϕ).^2)/3)
+            push!(summary_statistics, norm((vol_frac - ex.ϕ)./ex.ϕ))
         end
     end
     ##### Contact line position #####
-    # Apply model scaling to experimental data
-    t_non = dp.ψn*dp.G.*ex.t # Experimental time
-    w_non = ex.w./dp.Xc # Experimental half-width
     # Plot contact line position
     if output == true
-        plot(τ, S, xlabel = L"$\tau$", ylabel = L"$S(\tau)$", linecolor = :black, linewidth = 2, grid = false, margin=5mm, legend = false, xlims=(0, maximum(τ)), ylims=(0, dp.Xp/dp.Xc))
-        scatter!(t_non, w_non, marker =:xcross, linecolor =:black, label = "0.6% Agar")
+        plot(τ, S, xlabel = L"$\tau$", ylabel = L"$S(\tau)$", linecolor = :black, linewidth = 2, grid = false, margin=5mm, legend = false, xlims=(0, maximum(τ)), ylims=(0, par.L))
+        scatter!(ex.t, ex.w, marker =:xcross, linecolor =:black, label = "0.6% Agar")
         savefig("S-agar-$a.pdf")
     end
     # Compare with experiment
-    idx_exp = Int.(round.(ex.t.*(par.Nτ-1)./30780)) .+ 1 # Experimental time [min]
     S_comp = [S[i] for i in idx_exp]
-    push!(summary_statistics, sum(((S_comp[2:end] - w_non[2:end])./w_non[end]).^2)/8)
-    ##### Aspect ratio
-    aspect = dp.ε*maximum(h)/S[end]
+    push!(summary_statistics, norm((S_comp[2:end] - ex.w[2:end])./ex.w[end]))
+    ##### Aspect ratio #####
+    aspect = par.ε*maximum(h)/S[end]
     if output == true
         @printf("The aspect ratio is: %f.\n", aspect)
     end
-    push!(summary_statistics, ((aspect - ex.ar)^2)/ex.ar)
+    push!(summary_statistics, norm((aspect - ex.ar)/ex.ar))
+    ##### Write solution to file #####
+    if output == true
+        writedlm("t-agar-$a.csv", τ)
+        writedlm("xi-agar-$a.csv", ξ)
+        writedlm("xio-agar-$a.csv", ξo)
+        writedlm("h-agar-$a.csv", h)
+        writedlm("phi-agar-$a.csv", ϕ)
+        writedlm("gs-agar-$a.csv", gs)
+        writedlm("gso-agar-$a.csv", gso)
+        writedlm("gb-agar-$a.csv", gb)
+        writedlm("u-agar-$a.csv", u)
+        writedlm("S-agar-$a.csv", S)
+    end
+    ##### Compute distance #####
     return sum(summary_statistics)
 end

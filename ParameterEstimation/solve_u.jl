@@ -22,10 +22,10 @@ function solve_u(par, dξ, h, ϕ, gb, S)
     b[1] = 0.0 # Dirichlet BC (left boundary)
     # Interior grid points
     for i = 2:par.Nξ-1
-        b[i] = 1/(S*dξ)*(ϕ[i+1]*gb[i+1]*h[i+1] - ϕ[i-1]*gb[i-1]*h[i-1]) 
+        b[i] = par.Ψn/(S*dξ)*(ϕ[i+1]*gb[i+1]*h[i+1] - ϕ[i-1]*gb[i-1]*h[i-1]) 
     end
     # Right boundary
-    b[par.Nξ] = (S/2)*ϕ[par.Nξ]*gb[par.Nξ] # Neumann BC (right boundary)
+    b[par.Nξ] = S*(par.Ψn/2)*ϕ[par.Nξ]*gb[par.Nξ] # Neumann BC (right boundary)
     ### Solve linear system ###
     return A\b
 end
