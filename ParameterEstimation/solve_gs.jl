@@ -24,7 +24,7 @@ function solve_gs(par, dτ, dξ, ξ, ξo, gs, gso, gb, u, S)
             break
         end
         if iterations == 10
-            @printf("Warning: Nutrient matching did not converge. \n")
+            @printf("Error: Nutrient matching did not converge. \n")
             flag = true
             return gs, gso, flag
         end
@@ -34,7 +34,7 @@ function solve_gs(par, dτ, dξ, ξ, ξo, gs, gso, gb, u, S)
     gso_new = solve_gs_outer(par, dτ, dξo, gr, ξo, gso, u, S)
     # Sanity check
     if any(gs_new .< 0) || any(gso_new .< 0)
-        @printf("Warning: Non-physical nutrient concentration in substratum.\n")
+        @printf("Error: Non-physical nutrient concentration in substratum.\n")
         flag = true
         return gs, gso, flag
     end

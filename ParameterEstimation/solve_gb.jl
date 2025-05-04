@@ -7,23 +7,21 @@ function solve_gb(par, dτ, dξ, ξ, h, ϕ, gs, gb, u, S)
     ### Build matrix ##
     A = Matrix{Float64}(undef, par.Nξ, par.Nξ); fill!(A, 0.0) # Pre-allocate
     # Left boundary
-    A[1,1] = -3.0/(2*dξ) 
-    A[1,2] = 4.0/(2*dξ)
-    A[1,3] = -1.0/(2*dξ)
+    A[1,1] = h[1] + (dτ/2)*(h[1])*(-u[3]+4*u[2]-3*u[1])/(2*S*dξ) + (dτ/2)*(h[1]+h[2])/(S^2*dξ^2) + (dτ/2)*par.Qb + (dτ/2)*par.Υ*ϕ[1]*h[1]
+    A[1,2] = -(dτ/2)*(h[1]+h[2])/(S^2*dξ^2)
     # Interior grid points
     for i = 2:par.Nξ-1
         A[i, i] = h[i] + (dτ/2)*( par.Qb + par.Υ*ϕ[i]*h[i] + (h[i+1]+2*h[i]+h[i-1])/(2*S^2*dξ^2) + u[i]*h[i]/(S*dξ) )
-        A[i, i+1] = -(dτ/2)*( h[i]*ξ[i]*u[end]/(2*S*dξ) + (h[i+1]+h[i])/(2*S^2*dξ^2) )
-        A[i, i-1] = -(dτ/2)*( -h[i]*ξ[i]*u[end]/(2*S*dξ) + (h[i]+h[i-1])/(2*S^2*dξ^2) + u[i-1]*h[i-1]/(S*dξ) )
+        A[i, i+1] = -(dτ/2)*( h[i]*ξ[i]*u[end]/(S*dξ) + (h[i+1]+h[i])/(2*S^2*dξ^2) )
+        A[i, i-1] = -(dτ/2)*( -h[i]*ξ[i]*u[end]/(S*dξ) + (h[i]+h[i-1])/(2*S^2*dξ^2) + u[i-1]*h[i-1]/(S*dξ) )
     end
     # Right boundary
-    A[end, end] = 3.0/(2*dξ) # One-sided difference
-    A[end, end-1] = -4.0/(2*dξ) # One-sided difference
-    A[end, end-2] = 1.0/(2*dξ) # One-sided difference
+    A[end, end] = 1.0
     ### Build RHS ###
     b = Vector{Float64}(undef, par.Nξ) # Pre-allocate
     # Left boundary
-    b[1] = 0.0 # No-flux
+    b[1] = gb[1]*(h[1] - (dτ/2)*(h[1])*(-u[3]+4*u[2]-3*u[1])/(2*S*dξ) - (dτ/2)*(h[1]+h[2])/(S^2*dξ^2) - (dτ/2)*par.Qb - (dτ/2)*par.Υ*ϕ[1]*h[1]) +
+        gb[2]*(dτ/2)*(h[1]+h[2])/(S^2*dξ^2) + dτ*par.Qb*gs[1] # Ghost node scheme
     # Interior grid points
     for i = 2:par.Nξ-1
         b[i] = h[i]*gb[i] + dτ*par.Qb*gs[i] - 
@@ -32,12 +30,12 @@ function solve_gb(par, dτ, dξ, ξ, h, ϕ, gs, gb, u, S)
             (dτ/2)*( -h[i]*ξ[i]*u[end]/(2*S*dξ) + (h[i]+h[i-1])/(2*S^2*dξ^2) + u[i-1]*h[i-1]/(S*dξ) )*gb[i-1]
     end
     # Right boundary
-    b[end] = 0.0 # No-flux
+    b[end] = par.Qb*gs[end]/(u[end]*(3*h[end]-4*h[end-1]+h[end-2])/(2*dξ*S) + par.Qb)
     ### Solve linear system ###
     gb = A\b
     # Sanity check
     if any(gb .< 0)
-        @printf("Warning: Non-physical nutrient concentration in biofilm.\n")
+        @printf("Error: Non-physical nutrient concentration in biofilm.\n")
         flag = true
         return gb, flag
     end

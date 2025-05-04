@@ -59,6 +59,10 @@ function thinfilm_slip(par, ex, output::Bool)
         end
         # 2. Solve volume fraction equation
         ϕ = solve_phi(par, dτ, dξ, ξ, ϕ, gb, u, S[i])
+        if any(ϕ .> 1) || any(ϕ .< 0)
+            @printf("Error: Non-physical cell volume fraction. \n")
+            return 100.0
+        end
         # 3. Solve substratum nutrient equations (substratum)
         gs, gso, flag = solve_gs(par, dτ, dξ, ξ, ξo_old, gs, gso, gb, u, S[i])
         if flag == true
@@ -85,7 +89,7 @@ function thinfilm_slip(par, ex, output::Bool)
         gs = G(S[i+1].*ξ)# Update g_s inside biofilm
         gso = G(S[i+1].*ξo) # Update g_s outside biofilm
         if S[i+1] < S[i]
-            @printf("Warning: The biofilm retracted. \n")
+            @printf("Error: The biofilm retracted. \n")
             return 100.0
         end
         if S[i+1] >= par.L

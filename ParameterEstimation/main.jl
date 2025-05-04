@@ -29,8 +29,8 @@ include("solve_S.jl")
     T::Float64 = 30780 # [min] Experiment duration
     Hs::Float64 = 3.0 # [mm] Substratum depth
     Xs::Float64 = 50.0 # [mm] Substratum length scale (Petri dish half-width)
-    Xb::Float64 = 10.0 # [mm] Biofilm length scale
-    H0::Float64 = 0.12 # [mm] Initial biofilm height
+    Xb::Float64 = 2.0 # [mm] Biofilm length scale
+    H0::Float64 = 0.06 # [mm] Initial biofilm height
     X0::Float64 = 2.0 # [mm] Initial biofilm half-width
     G::Float64 = 5e-5 # [g/mm^2] Initial nutrient concentration
     D0::Float64 = 4.04e-2 # [mm^2/min] Glucose diffusivity in water
@@ -76,7 +76,7 @@ function nondimensionalise(p, dp, Ds, Db)
     non_S0 = dp.X0/dp.Xb
     non_ε = dp.Hs/dp.Xs
     non_D = Ds/Db
-    non_Qs = dp.Q*dp.Xb^2/(dp.Hs*Ds)
+    non_Qs = dp.Q*dp.Xb*dp.Xs/(dp.Hs*Ds) # dp.Q*dp.Xb^2/(dp.Hs*Ds)
     non_Qb = dp.Q*dp.Xb*dp.Xs/(dp.Hs*Db)
     return Params(T = non_T, L = non_L, H0 = non_H0, S0 = non_S0, ε = non_ε, D = non_D, Qs = non_Qs, Qb = non_Qb, Ψn = p[1], Ψd = p[2], Υ = p[3], λ = p[4])
 end
@@ -132,15 +132,14 @@ function main()
     Vp = Vector{Vector{Float64}}()
     Vf = Vector{Float64}()
     for a in A
-        ##### Nondimensionalise
+        ##### Parameters and experimental data
         Ds = (1-0.023*a)*dp.D0 # [mm^2/min] Nutrient diffusivity (substratum)
-        ##### Experimental data
         t, w, ϕ, ar = get_exp(a, dp, Db)
         ex = ExpData(a, t, w, ϕ, ar) # Load experimental data
         ##### Optimise parameter estimates for given experimental data
         # Global black box optimisation
-        res = bboptimize(x -> objective(x, dp, Ds, Db, ex); SearchRange = [(0.0, 1.0), (0.0, 0.01), (0.0, 10.0), (0.0, 1.0)], 
-            MaxFuncEvals = 1000, Method = :adaptive_de_rand_1_bin)
+        res = bboptimize(x -> objective(x, dp, Ds, Db, ex); SearchRange = [(0.0, 0.5), (0.0, 0.01), (0.0, 20.0), (0.0, 1.0)], 
+            MaxFuncEvals = 500, Method = :adaptive_de_rand_1_bin)
         p0 = best_candidate(res)
         lower = [0.0, 0.0, 0.0, 0.0]
         upper = [Inf, Inf, Inf, Inf]
