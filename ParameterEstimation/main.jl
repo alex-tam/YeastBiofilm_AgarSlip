@@ -29,9 +29,8 @@ include("solve_S.jl")
     T::Float64 = 30780 # [min] Experiment duration
     Hs::Float64 = 3.0 # [mm] Substratum depth
     Xs::Float64 = 50.0 # [mm] Substratum length scale (Petri dish half-width)
-    Xb::Float64 = 2.0 # [mm] Biofilm length scale
-    H0::Float64 = 0.06 # [mm] Initial biofilm height
-    X0::Float64 = 2.0 # [mm] Initial biofilm half-width
+    Xb::Float64 = 1.5 # [mm] Biofilm length scale (Initial biofilm half-width)
+    H0::Float64 = 0.006 # [mm] Initial biofilm height
     G::Float64 = 5e-5 # [g/mm^2] Initial nutrient concentration
     D0::Float64 = 4.04e-2 # [mm^2/min] Glucose diffusivity in water
     Q::Float64 = 2.92e-3 # [mm/min] Nutrient mass transfer coefficient
@@ -47,11 +46,10 @@ end
     T::Float64 # [-] End time
     L::Float64 # [-] Domain width
     H0::Float64 # [-] Initial biofilm height
-    S0::Float64 # [-] Initial contact line position
+    S0::Float64 = 1.0 # [-] Initial contact line position
     ε::Float64 # [-] Substratum aspect ratio
     D::Float64 # [-] Nutrient diffusion coefficient
-    Qs::Float64 # [-] Nutrient depletion rate
-    Qb::Float64 # [-] Nutrient uptake rate
+    Q::Float64 # [-] Nutrient uptake rate
     Ψn::Float64 # [-] Biomass proliferation rate
     Ψd::Float64 # [-] Biomass death rate
     Υ::Float64 # [-] Nutrient consumption rate
@@ -73,12 +71,10 @@ function nondimensionalise(p, dp, Ds, Db)
     non_T = Db/dp.Xb^2*dp.T
     non_L = dp.Xs/dp.Xb
     non_H0 = dp.H0*dp.Xs/(dp.Hs*dp.Xb)
-    non_S0 = dp.X0/dp.Xb
     non_ε = dp.Hs/dp.Xs
     non_D = Ds/Db
-    non_Qs = dp.Q*dp.Xb*dp.Xs/(dp.Hs*Ds) # dp.Q*dp.Xb^2/(dp.Hs*Ds)
-    non_Qb = dp.Q*dp.Xb*dp.Xs/(dp.Hs*Db)
-    return Params(T = non_T, L = non_L, H0 = non_H0, S0 = non_S0, ε = non_ε, D = non_D, Qs = non_Qs, Qb = non_Qb, Ψn = p[1], Ψd = p[2], Υ = p[3], λ = p[4])
+    non_Q = dp.Q*dp.Xb*dp.Xs/(dp.Hs*Db)
+    return Params(T = non_T, L = non_L, H0 = non_H0, ε = non_ε, D = non_D, Q = non_Q, Ψn = p[1], Ψd = p[2], Υ = p[3], λ = p[4])
 end
 
 "Compute the objective function: distance between model and parameters for given solution"

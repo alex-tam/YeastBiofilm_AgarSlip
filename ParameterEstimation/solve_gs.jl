@@ -47,11 +47,11 @@ function solve_gs_inner(par, dτ, dξ, gr, ξ, gs, gb, u, S)
     A = Matrix{Float64}(undef, par.Nξ, par.Nξ)
     fill!(A, 0.0) # Pre-allocate
     # Left boundary
-    A[1, 1] = 1.0 + (dτ/2)*( 2*par.D/(S^2*dξ^2) + par.Qs )
+    A[1, 1] = 1.0 + (dτ/2)*( 2*par.D/(S^2*dξ^2) + par.Q/par.L )
     A[1, 2] = -(dτ/2)*( 2*par.D/(S^2*dξ^2) )
     # Interior grid points
     for i = 2:par.Nξ-1
-        A[i, i] = 1.0 + (dτ/2)*( 2*par.D/(S^2*dξ^2) + par.Qs )
+        A[i, i] = 1.0 + (dτ/2)*( 2*par.D/(S^2*dξ^2) + par.Q/par.L )
         A[i, i+1] = -(dτ/2)*( ξ[i]*u[end]/(2*S*dξ) + par.D/(S^2*dξ^2) )
         A[i, i-1] = -(dτ/2)*( -ξ[i]*u[end]/(2*S*dξ) + par.D/(S^2*dξ^2) )
     end
@@ -60,10 +60,10 @@ function solve_gs_inner(par, dτ, dξ, gr, ξ, gs, gb, u, S)
     ### Build RHS ###
     b = Vector{Float64}(undef, par.Nξ) # Pre-allocate
     # Left boundary
-    b[1] = gs[1] + dτ*par.Qs*gb[1] - (dτ/2)*( 2*par.D/(S^2*dξ^2) + par.Qs )*gs[1] + (dτ/2)*( 2*par.D/(S^2*dξ^2) )*gs[2] # No-flux BC
+    b[1] = gs[1] + dτ*par.Q/par.L*gb[1] - (dτ/2)*( 2*par.D/(S^2*dξ^2) + par.Q/par.L )*gs[1] + (dτ/2)*( 2*par.D/(S^2*dξ^2) )*gs[2] # No-flux BC
     # Interior grid points
     for i = 2:par.Nξ-1
-        b[i] = gs[i] + dτ*par.Qs*gb[i] - (dτ/2)*( 2*par.D/(S^2*dξ^2) + par.Qs )*gs[i] + (dτ/2)*( ξ[i]*u[end]/(2*S*dξ) + par.D/(S^2*dξ^2) )*gs[i+1] + (dτ/2)*( -ξ[i]*u[end]/(2*S*dξ) + par.D/(S^2*dξ^2) )*gs[i-1]
+        b[i] = gs[i] + dτ*par.Q/par.L*gb[i] - (dτ/2)*( 2*par.D/(S^2*dξ^2) + par.Q/par.L )*gs[i] + (dτ/2)*( ξ[i]*u[end]/(2*S*dξ) + par.D/(S^2*dξ^2) )*gs[i+1] + (dτ/2)*( -ξ[i]*u[end]/(2*S*dξ) + par.D/(S^2*dξ^2) )*gs[i-1]
     end
     # Right boundary
     b[end] = gr # Dirichlet condition
