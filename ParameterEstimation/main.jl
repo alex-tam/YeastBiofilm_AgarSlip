@@ -29,11 +29,10 @@ include("solve_S.jl")
     T::Float64 = 30780 # [min] Experiment duration
     Hs::Float64 = 3.0 # [mm] Substratum depth
     Xs::Float64 = 50.0 # [mm] Substratum length scale (Petri dish half-width)
-    Xb::Float64 = 1.5 # [mm] Biofilm length scale (Initial biofilm half-width)
-    H0::Float64 = 0.006 # [mm] Initial biofilm height
+    Xb::Float64 = 2.0 # [mm] Biofilm length scale (Initial biofilm half-width)
+    H0::Float64 = 0.004 # [mm] Initial biofilm height
     G::Float64 = 5e-5 # [g/mm^2] Initial nutrient concentration
     D0::Float64 = 4.04e-2 # [mm^2/min] Glucose diffusivity in water
-    Q::Float64 = 2.92e-3 # [mm/min] Nutrient mass transfer coefficient
 end
 
 "Data structure for dimensionless parameters"
@@ -48,10 +47,10 @@ end
     H0::Float64 # [-] Initial biofilm height
     S0::Float64 = 1.0 # [-] Initial contact line position
     ε::Float64 # [-] Substratum aspect ratio
-    D::Float64 # [-] Nutrient diffusion coefficient
-    Q::Float64 # [-] Nutrient uptake rate
     Ψn::Float64 # [-] Biomass proliferation rate
     Ψd::Float64 # [-] Biomass death rate
+    D::Float64 # [-] Nutrient diffusion coefficient
+    Q::Float64 # [-] Nutrient uptake rate
     Υ::Float64 # [-] Nutrient consumption rate
     λ::Float64 # [-] Slip coefficient
 end
@@ -73,8 +72,7 @@ function nondimensionalise(p, dp, Ds, Db)
     non_H0 = dp.H0*dp.Xs/(dp.Hs*dp.Xb)
     non_ε = dp.Hs/dp.Xs
     non_D = Ds/Db
-    non_Q = dp.Q*dp.Xb*dp.Xs/(dp.Hs*Db)
-    return Params(T = non_T, L = non_L, H0 = non_H0, ε = non_ε, D = non_D, Q = non_Q, Ψn = p[1], Ψd = p[2], Υ = p[3], λ = p[4])
+    return Params(T = non_T, L = non_L, H0 = non_H0, ε = non_ε, Ψn = p[1], Ψd = p[2], D = non_D, Q = p[3], Υ = p[4], λ = p[5])
 end
 
 "Compute the objective function: distance between model and parameters for given solution"
@@ -93,25 +91,30 @@ function fg!(F, G, p::Vector{T}, dp, Ds, Db, ex::ExpData) where{T}
     ##### Compute gradient
     if G !== nothing
         # Gradient in Ψn direction
-        p1 = p + δ*[1.0, 0.0, 0.0, 0.0]
+        p1 = p + δ*[1.0, 0.0, 0.0, 0.0, 0.0]
         par1 = nondimensionalise(p1, dp, Ds, Db)
         dist1 = thinfilm_slip(par1, ex, false)
         G[1] = (dist1-dist)/δ
         # Gradient in Ψd direction
-        p2 = p + δ*[0.0, 1.0, 0.0, 0.0] 
+        p2 = p + δ*[0.0, 1.0, 0.0, 0.0, 0.0] 
         par2 = nondimensionalise(p2, dp, Ds, Db)
         dist2 = thinfilm_slip(par2, ex, false)
         G[2] = (dist2-dist)/δ
-        # Gradient in Υ direction
-        p3 = p + δ*[0.0, 0.0, 1.0, 0.0] 
+        # Gradient in Q direction
+        p3 = p + δ*[0.0, 0.0, 1.0, 0.0, 0.0] 
         par3 = nondimensionalise(p3, dp, Ds, Db)
         dist3 = thinfilm_slip(par3, ex, false)
         G[3] = (dist3-dist)/δ
-        # Gradient in λ direction
-        p4 = p + δ*[0.0, 0.0, 0.0, 1.0] 
+        # Gradient in Υ direction
+        p4 = p + δ*[0.0, 0.0, 0.0, 1.0, 0.0] 
         par4 = nondimensionalise(p4, dp, Ds, Db)
         dist4 = thinfilm_slip(par4, ex, false)
         G[4] = (dist4-dist)/δ
+        # Gradient in λ direction
+        p5 = p + δ*[0.0, 0.0, 0.0, 0.0, 1.0] 
+        par5 = nondimensionalise(p5, dp, Ds, Db)
+        dist5 = thinfilm_slip(par5, ex, false)
+        G[5] = (dist5-dist)/δ
     end
     if F !== nothing
         return dist
@@ -134,11 +137,11 @@ function main()
         ex = ExpData(a, t, w, ϕ, ar) # Load experimental data
         ##### Optimise parameter estimates for given experimental data
         # Global black box optimisation
-        res = bboptimize(x -> objective(x, dp, Ds, Db, ex); SearchRange = [(0.0, 0.5), (0.0, 0.01), (0.0, 20.0), (0.0, 1.0)], 
-            MaxFuncEvals = 500, Method = :adaptive_de_rand_1_bin)
+        res = bboptimize(x -> objective(x, dp, Ds, Db, ex); SearchRange = [(0.0, 1.0), (0.0, 0.02), (0.0, 10.0), (0.0, 12.0), (0.0, 5.0)], 
+            MaxFuncEvals = 1000, Method = :adaptive_de_rand_1_bin)
         p0 = best_candidate(res)
-        lower = [0.0, 0.0, 0.0, 0.0]
-        upper = [Inf, Inf, Inf, Inf]
+        lower = [0.0, 0.0, 0.0, 0.0, 0.0]
+        upper = [Inf, Inf, Inf, Inf, Inf]
         # Gradient-based box-constrained optimisation
         inner_optimizer = Optim.LBFGS(m = 20, 
             linesearch = LineSearches.HagerZhang(),
