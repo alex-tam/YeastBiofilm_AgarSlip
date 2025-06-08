@@ -138,5 +138,5 @@ function thinfilm_slip(par, ex, output::Bool)
         writedlm("S-agar-$a.csv", S)
     end
     ##### Compute distance #####
-    return sum(summary_statistics)
+    return norm(summary_statistics)
 end
