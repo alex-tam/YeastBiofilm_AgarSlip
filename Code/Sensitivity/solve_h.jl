@@ -1,0 +1,31 @@
+# Solve mass balance equation for h(x,t) using Crank-Nicolson
+# Alex Tam, 16/11/2023
+
+function solve_h(par, dτ, dξ, ξ, h, ϕ, gb, u, S)
+    ### Build matrix ##
+    A = Matrix{Float64}(undef, par.Nξ, par.Nξ); fill!(A, 0.0) # Pre-allocate
+    # Left boundary
+    A[1,1] = -3.0/(2*dξ) # One-sided difference
+    A[1,2] = 4.0/(2*dξ) # One-sided difference
+    A[1,3] = -1.0/(2*dξ) # One-sided difference
+    # Interior grid points
+    for i = 2:par.Nξ-1
+        A[i,i] = 1.0 - dτ/2*par.Ψn*ϕ[i]*gb[i] + dτ*u[i]/(2*S*dξ)
+        A[i,i+1] = -dτ*ξ[i]*u[end]/(4*S*dξ) 
+        A[i,i-1] = dτ*ξ[i]*u[end]/(4*S*dξ) - dτ*u[i-1]/(2*S*dξ)
+    end
+    # Right boundary
+    A[end,end] = 1.0
+    ### Build RHS ###
+    b = Vector{Float64}(undef, par.Nξ) # Pre-allocate
+    # Left boundary
+    b[1] = 0.0 # No-flux BC
+    # Interior grid points
+    for i = 2:par.Nξ-1
+        b[i] = h[i] + dτ*ξ[i]*u[end]/(4*dξ*S)*(h[i+1]-h[i-1]) - dτ/(2*dξ*S)*(u[i]*h[i] - u[i-1]*h[i-1]) + dτ/2*par.Ψn*ϕ[i]*gb[i]*h[i]
+    end
+    # Right boundary
+    b[end] = 0.0
+    ### Solve linear system ###
+    return A\b
+end
