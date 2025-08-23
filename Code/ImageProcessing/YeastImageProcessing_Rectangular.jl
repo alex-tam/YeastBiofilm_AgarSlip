@@ -13,8 +13,8 @@ using DelimitedFiles
 
 "Generate file names for images"
 function filename(y, r, d)
-    fw = string("Projects_Current/Biofilm_ThinFilmSlip/Experiments/YPDMat_Width/YPD", y, "_R", r, "_D", d, ".jpeg")
-    fs = string("Projects_Current/Biofilm_ThinFilmSlip/Experiments/YPDMat_Scale/YPD", y, "_R", r, "_D", d, ".jpeg")
+    fw = string("Results/Experimental/Photographs/Width/YPD", y, "_R", r, "_D", d, ".jpeg")
+    fs = string("Results/Experimental/Photographs/Scale/YPD", y, "_R", r, "_D", d, ".jpeg")
     return fw, fs
 end
 

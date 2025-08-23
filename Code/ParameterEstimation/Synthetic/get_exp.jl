@@ -4,7 +4,7 @@
 "Obtain dimensionless experimental data for given agar density"
 function get_exp(a, dp, Db)
     ##### Scale time
-    T = vec(readdlm("Projects_Current/Biofilm_ThinFilmSlip/Results/Experimental/Width/T.csv")) # Dimensional time [hr]
+    T = vec(readdlm("Results/Experimental/Width/T.csv")) # Dimensional time [hr]
     t = 60*Db/(dp.Xb^2).*T # Experimental time [-]
     ##### Randomise
     rv = rand(Uniform(0.932, 1.05)) # Factor for random cell viability based on experimental range
@@ -56,13 +56,13 @@ function randomise_width(a, t, dp)
     # Import data
     for i in eachindex(R)
         r = R[i]
-        W[:, i] = vec(readdlm("Projects_Current/Biofilm_ThinFilmSlip/Results/Experimental/Width/BiofilmHalfWidth_YPD$a-R$r.csv")) # Half-width [cm]
+        W[:, i] = vec(readdlm("Results/Experimental/Width/BiofilmHalfWidth_YPD$a-R$r.csv")) # Half-width [cm]
     end
     # Compute standard deviations
     σ = vec(std(W, dims=2))
     rw = rand(Normal())
     # Generate data
-    mean = vec(readdlm("Projects_Current/Biofilm_ThinFilmSlip/Results/Experimental/Width/BiofilmHalfWidthMean_YPD$a.csv")) # Half-width [cm]
+    mean = vec(readdlm("Results/Experimental/Width/BiofilmHalfWidthMean_YPD$a.csv")) # Half-width [cm]
     w = (mean .+ rw.*σ)/(dp.Xb/10) # [-] Dimensionless half-width
     return w
 end
