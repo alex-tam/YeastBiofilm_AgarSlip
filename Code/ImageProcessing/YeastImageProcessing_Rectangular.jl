@@ -132,10 +132,10 @@ function main()
         if i == 1
             plot(T, m, yerr=(ϵ⁻, ϵ⁺), 
                 marker=:xcross, markerstrokewidth=2, markersize = 5, markerstrokecolor=:auto, lc=:auto, linewidth=2,
-                xlabel = L"t \; [\textrm{hr}]", ylabel = L"S(t) \; [\textrm{cm}]", label= "$y% Agar", 
+                xlabel = L"t \; [\textrm{hr}]", ylabel = L"S(t) \; [\textrm{cm}]", label= "$y% agar", 
                 xlims = (0, 520), ylims=(0, 2.0), margins = 5mm)
         else
-            plot!(T, m, yerr=(ϵ⁻, ϵ⁺), marker=:xcross, markerstrokewidth=1, markersize = 3, markerstrokecolor=:auto, lc=:auto, linewidth=2, label= "$y% Agar")
+            plot!(T, m, yerr=(ϵ⁻, ϵ⁺), marker=:xcross, markerstrokewidth=1, markersize = 3, markerstrokecolor=:auto, lc=:auto, linewidth=2, label= "$y% agar")
         end
     end
     savefig("BiofilmHalfWidth_MeanScatter_All.pdf")
