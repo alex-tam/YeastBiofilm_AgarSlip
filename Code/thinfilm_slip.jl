@@ -17,7 +17,7 @@ end
 "Plot solution at a given, fixed time stamp"
 function draw_solution(i, ξ, ξo, τ, S, h, ϕ, gs, gso, gb, u, a)
     plot(S.*ξ, h, xlabel = L"$x$", xlims=(0, maximum(S.*ξo)), ylims=(0, 1. + ceil(maximum(h))), grid = false, margin=5mm, linecolor = :black, linewidth = 3, label=L"$h$", legend=:topright)
-    plot!(S.*ξ, ϕ, linecolor = :red, linewidth = 3, label=L"$\bar{\phi}_n$")
+    plot!(S.*ξ, ϕ, linecolor = :red, linewidth = 3, label=L"$\phi$")
     plot!(S.*ξ, gs, linecolor = :green, linewidth = 3, label=L"$g_s$")
     plot!(S.*ξo, gso, linecolor = :green, linewidth = 3, label=false)
     plot!(S.*ξ, gb, linecolor = :blue, linewidth = 3, label=L"$g_b$")

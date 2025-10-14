@@ -18,7 +18,7 @@ end
 function draw_solution(i, ξ, ξo, τ, S, h, ϕ, gs, gso, gb, u, a, r)
     j = τ[i]
     plot(S.*ξ, h, xlabel = L"$x$", title = "Solution (t = $j)", xlims=(0, maximum(S.*ξo)), ylims=(0, 1. + ceil(maximum(h))), grid = false, margin=5mm, linecolor = :black, linewidth = 2, label=L"$h$")
-    plot!(S.*ξ, ϕ, linecolor = :red, linewidth = 2, label=L"$\bar{\phi}_n$")
+    plot!(S.*ξ, ϕ, linecolor = :red, linewidth = 2, label=L"$\phi$")
     plot!(S.*ξ, gs, linecolor = :green, linewidth = 2, label=L"$g_s$")
     plot!(S.*ξo, gso, linecolor = :green, linewidth = 2, label=false)
     plot!(S.*ξ, gb, linecolor = :blue, linewidth = 2, label=L"$g_b$")
