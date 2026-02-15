@@ -4,9 +4,20 @@ This repository contains Julia code, simulation results, and experimental data f
 ## Contents
 
 - Code
-    - TBA.
+    - Model_ParameterEstimation:
+    - Model_Sensitivity:
+    - Model_Single:
+    - ImageProcessing:
+    - UncertaintyPlots:
 - Results
-    - TBA.
+    - Convergence:
+    - Experimental:
+    - ParameterEstimation:
+    - Sensitivity:
+    - Single:
 
-## Instructions for use
-Julia 1.12.5
+## Instructions
+All code has been tested using Julia 1.12.5, which can be downloaded and installed using the instructions on the [Julia website](https://julialang.org/downloads/).
+
+- Run code.
+- Change parameters
