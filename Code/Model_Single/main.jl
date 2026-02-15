@@ -42,7 +42,7 @@ end
     Nξ::Int = 101 # [-] Number of grid points (biofilm)
     Nξo::Int = 101 # [-] Number of grid points (substratum)
     Nτ::Int = 401 # [-] Number of time points
-    plot_interval::Int = 400 # [-] Time points between output files
+    plot_interval::Int = 40 # [-] Time points between output files
     T::Float64 # [-] End time
     L::Float64 # [-] Domain width
     H0::Float64 # [-] Initial biofilm height
@@ -56,7 +56,7 @@ end
     λ::Float64 = 2.6707602643634694 # [-] Slip coefficient
 end
 
-"Data structure for experiments"
+"Data structure for experimental data"
 struct ExpData
     a::Float64 # [-] Agar weight percentage
     t::Vector{Float64} # [-] Time for biofilm width collection
@@ -66,56 +66,32 @@ struct ExpData
 end
 
 "Apply nondimensionalisation to obtain dimensionless parameters"
-function nondimensionalise(p, dp, Ds, Db)
+function nondimensionalise(dp, Ds, Db)
     # Apply nondimensionalisation
     non_T = Db/dp.Xb^2*dp.T
     non_L = dp.Xs/dp.Xb
     non_H0 = dp.H0*dp.Xs/(dp.Hs*dp.Xb)
     non_ε = dp.Hs/dp.Xs
     non_D = Ds/Db
-    return Params(T = non_T, L = non_L, H0 = non_H0, ε = non_ε, D = non_D, Υ = p[1], λ = p[2])
-end
-
-"Data structure for experiments"
-struct ExpData
-    a::Float64 # [-] Agar weight percentage
-    t::Vector{Float64} # [-] Time for biofilm width collection
-    w::Vector{Float64} # [-] Vector of biofilm widths
-    ϕ::Vector{Float64} # [-] Cell viability
-    ar::Float64 # [-] Aspect ratio
+    return Params(T = non_T, L = non_L, H0 = non_H0, ε = non_ε, D = non_D)  				
 end
 
 "Main function for solving thin-film model"
 function main()
     ##### Establish plots
     gr() # Load GR plotting back-end
-    default(titlefont = (14, "Computer Modern"), guidefont = (18, "Computer Modern"), tickfont = (14, "Computer Modern")) # Plot settings
-    ##### Initialise parameters and experimental data
+    default(legendfont = (16, "Computer Modern"), guidefont = (24, "Computer Modern"), tickfont = (20, "Computer Modern")) # Plot settings
+    ##### Initialise parameters and experimenta data
     dp = Dimensional()
     a = 2.0
     Db = 0.24*dp.D0 # [mm^2/min] Nutrient diffusivity (biofilm)
-    Ds = (1-0.023*a)*dp.D0 # [mm^2/min] Nutrient diffusivity (substratum)
+    Ds = (1-0.023*a)*dp.D0
+    par = nondimensionalise(dp, Ds, Db)
     t, w, ϕ, ar = get_exp(a, dp, Db)
     ex = ExpData(a, t, w, ϕ, ar) # Load experimental data
-    ##### Pre-allocate parameter ranges and output
-    # p1 = range(0.0, 0.91, length = 50)
-    # p1 = range(0.0, 0.025, length = 50)
-    # p1 = range(0.01, 9.81, length = 50)
-    p1 = range(0.0, 15.0, length = 50)
-    p2 = range(0.0, 8.0, length = 50)
-    dist = Matrix{Float64}(undef, length(p1), length(p2))
-    ##### Generate results
-    for i in eachindex(p1)
-        for j in eachindex(p2)
-            p = [p1[i], p2[j]]
-            par = nondimensionalise(p, dp, Ds, Db)
-            dist[j,i] = thinfilm_slip(par, ex, false)
-        end
-    end
-    ##### Plot
-    heatmap(p1, p2, dist, xlabel = L"$\Upsilon$", ylabel = L"$\lambda^*$", margins=5mm, c=cgrad(:default, rev=true), clims=(0.0,1.0))
-    savefig("HeatMap_Upsilon_lambda-agar-$a.pdf")
-    writedlm("HeatMap_Upsilon_lambda-agar-$a.csv", dist)
+    ##### Solve model
+    dist = thinfilm_slip(par, ex, true)
+    return dist
 end
 
 @time main()
