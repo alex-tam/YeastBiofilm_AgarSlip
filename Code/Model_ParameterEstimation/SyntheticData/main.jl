@@ -138,7 +138,7 @@ function main()
         W = Vector{Vector{Float64}}()
         Phi = Vector{Vector{Float64}}()
         AR = Vector{Float64}()
-        for r = 1:25
+        for r = 1:50
             ##### Parameters and synthetic data
             Ds = (1-0.023*a)*dp.D0 # [mm^2/min] Nutrient diffusivity (substratum)
             t, w, ϕ, ar = get_exp(a, dp, Db)
